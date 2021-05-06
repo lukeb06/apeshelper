@@ -3,12 +3,24 @@ var fetch = require("node-fetch");
 var express = require("express");
 var app = express();
 var server = require("http").Server(app);
-server.listen(process.env.PORT || 80, () => console.log("Server Started!"));
+server.listen(process.env.PORT || 3000, () => console.log("Server Started!"));
+
+app.use(require("cors")());
 
 var matchAll = require("match-all");
 
+var keys = [
+	"AIzaSyA8x1TJcYrm9aWcfOts-ErxUvcfbSY2bz0",
+	"AIzaSyASYa5MgufKHwb3njv0M72n__WF_sG9lh0",
+	"AIzaSyBFYyn93wf6_8u-0yBsq7nrIRdrVCyQNos"
+];
+
+Array.prototype.random = function() {
+	return this[Math.floor(Math.random() * this.length)];
+}
+
 var googleSearch = async (query) => {
-	var r = await fetch(`https://www.googleapis.com/customsearch/v1?key=AIzaSyASYa5MgufKHwb3njv0M72n__WF_sG9lh0&cx=e51615b7e7a44e7e6&q=${query}`);
+	var r = await fetch(`https://www.googleapis.com/customsearch/v1?key=${keys.random()}&cx=e51615b7e7a44e7e6&q=${query}`);
 	r = await r.json();
 	return r.items;
 }
@@ -78,9 +90,9 @@ function similarity(s1, s2) {
 
 
 
-var scrapeQuiz = (req, res) => {
-  fetch(`https://quizlet.com/${req.params.quizId}/${req.params.quizTitle}`, {
-  "headers": {
+
+
+var globalHeaders = {
     "user-agent": "Mozilla/5.0",
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "accept-language": "en-US,en;q=0.9",
@@ -91,9 +103,18 @@ var scrapeQuiz = (req, res) => {
     "sec-fetch-mode": "navigate",
     "sec-fetch-site": "same-origin",
     "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
-    "cookie": "currentCardIndex=0%2C0; set_num_visits_per_set=8; setPageData=%7B%22studySelected%22%3Afalse%7D; __cfduid=d499dc5c6bc0a85d8f0184a1403fb79c31619719840; qi5=dj53zzmsqhe6%3AaqyBqjugY0HZ0NzpsgLF; fs=qsc7tt; _ga=GA1.2.1681965699.1619719848; g_state={\"i_l\":0,\"i_t\":1619806254096}; qlts=1_QD9Yi-mH13BFrcjrvc7JB8EiweUPpdRmgSEd9buKd.UKeo6Jpikp2CDi76bx6Dbmwlcrd.8Rr.A9XQ; qtkn=gBuY8cugrxzUu6bBw9YZT3; ab.storage.userId.6f8c2b67-8bd5-42f6-9c5f-571d9701f693=%7B%22g%22%3A%2274212266%22%2C%22c%22%3A1619719858816%2C%22l%22%3A1619719858816%7D; ab.storage.deviceId.6f8c2b67-8bd5-42f6-9c5f-571d9701f693=%7B%22g%22%3A%22dd9dde1b-6834-8963-7b02-ad9d71ea14c5%22%2C%22c%22%3A1619719858890%2C%22l%22%3A1619719858890%7D; _delighted_web={%22Nk3AkgdeccgO4tql%22:{%22_delighted_fst%22:{%22t%22:%221619719861735%22}}}; __qca=P0-2038130458-1619719862321; akv=%7B%7D; _gid=GA1.2.163574397.1620043567; _britepool_bpid_=%7B%22value%22%3A%22e3a4f73f-f626-4fcd-9c56-bed2940808b9%22%2C%22expiryTimeMS%22%3A1683115567110%7D; show-study-streak-modal=%7B%22date%22%3A1620014400%2C%22shouldShowModal%22%3Afalse%7D; __cfruid=2883d09fdc7a70c5e7607d9c85afffd2393cf33f-1620069039; io=VkcCawutbgmI5NQZssWz; app_session_id=e60ca774-802e-47c9-89ed-c9a4bcb59478; __cf_bm=612a9d98534a30f436eabcf06b88f6d1a4f2908f-1620081311-1800-AaZ3m7MYXJAYCDZXN/pB89JdmU76f89cyO/882JhXoHqI3slnI1vSLJMxdoNcIc2GAzSIPt6Zg191qSNXqr+444=; tsp=learn_mode_page; ab.storage.sessionId.6f8c2b67-8bd5-42f6-9c5f-571d9701f693=%7B%22g%22%3A%228bad8016-19c0-2253-f9ba-c8d74e5c475c%22%2C%22e%22%3A1620083342838%2C%22c%22%3A1620079768601%2C%22l%22%3A1620081542838%7D; _dd_s=rum=0&expire=1620083044212"
-  },
+    "upgrade-insecure-requests": "1"
+  }
+
+
+
+
+
+
+
+var scrapeQuiz = (req, res) => {
+  fetch(`https://quizlet.com/${req.params.quizId}/${req.params.quizTitle}`, {
+  "headers": globalHeaders,
   "referrer": "https://quizlet.com/287534176/learn",
   "referrerPolicy": "origin-when-cross-origin",
   "body": null,
@@ -135,6 +156,7 @@ app.get("/execute", (req, res) => {
 	var totalItems = [];
 	var doneSearching = false;
 	quizSearch({query:{q:req.query.q}}, {send:(items) => {
+		if (items == undefined) return res.send([]);
 		items.forEach((item, i) => {
 			setTimeout(() => {
 				scrapeQuiz({params:{quizId:item.link.split("/")[3], quizTitle:item.link.split("/")[4]}}, {send:(_items) => {
@@ -142,8 +164,8 @@ app.get("/execute", (req, res) => {
 					
 					var relations = newItems.map(v => {
 						var sims = [
-							similarity(v[0], req.query.q),
-							similarity(v[1], req.query.q)
+							similarity(v[0] || "", req.query.q || ""),
+							similarity(v[1] || "", req.query.q || "")
 						];
 						
 						if (sims[0] > sims[1]) {
@@ -175,8 +197,17 @@ app.get("/execute", (req, res) => {
 
 
 
+app.get("/search", (req, res) => {
+	var params = Object.entries(req.query).map(v => `${v[0]}=${v[1]}`).join("&")
+	fetch(`https://www.google.com/search?${params}`).then(r=>r.text()).then(r => {
+		res.send(r);
+	});
+});
 
 
+app.get("/url", (req, res) => {
+	fetch(req.query.q, {headers:globalHeaders}).then(r => r.text()).then(r => res.send(r));
+});
 
 
 

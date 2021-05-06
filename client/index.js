@@ -1,8 +1,9 @@
 var inputBox = document.createElement("input");
+inputBox.placeholder = "Query";
 document.body.append(inputBox);
 
 var reqBtn = document.createElement("button");
-reqBtn.textContent = "Request";
+reqBtn.textContent = "Search";
 document.body.append(reqBtn);
 
 var resBody = document.createElement("div");
@@ -57,10 +58,24 @@ function similarity(s1, s2) {
 
 
 
-
-
-reqBtn.addEventListener("click", () => {
-	fetch(`/quizSearch?q=${inputBox.value}`, {method:"GET"}).then(r => r.json())
+var submit = () => {
+	resBody.innerHTML = "";
+	var c = document.createElement("center");
+	c.textContent = "Searching...";
+	resBody.append(c);
+	var q = inputBox.value;
+	q.split("\'");
+	q.join("");
+	fetch(`/execute?q=${q}`).then(r => r.json())
+	.then(items => {
+		resBody.innerHTML = "";
+		items.forEach(v => {
+			var el = document.createElement("span");
+			el.innerHTML = v;
+			resBody.append(el);
+		});
+	});
+	/*fetch(`/quizSearch?q=${inputBox.value}`, {method:"GET"}).then(r => r.json())
 	.then(items => {
 		resBody.innerHTML = "";
 		items.forEach((item, i) => {
@@ -93,20 +108,17 @@ reqBtn.addEventListener("click", () => {
 							resBody.append(el);
 						}
 					});
-					
-					/*newItems.forEach(v => {
-						if (new RegExp(v[0]).test(inputBox.value)) {
-							var el = document.createElement("a");
-							el.textContent = v[1];
-							resBody.append(el);
-						} else if (new RegExp(v[1]).test(inputBox.value)) {
-							var el = document.createElement("a");
-							el.textContent = v[0];
-							resBody.append(el);
-						}
-					});*/
 				});
 			},500*i);
 		});
-	});
+	});*/
+}
+
+
+
+
+inputBox.addEventListener("keydown", (e) => {
+	if (e.key == "Enter") submit();
 });
+
+reqBtn.addEventListener("click", submit);
